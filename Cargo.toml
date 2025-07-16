@@ -1,11 +1,15 @@
 [package]
-name = "polymarket-rs-client"
+name = "polymarket"
 description = "An async client to interact with polymarket."
-repository = "https://github.com/TechieBoy/polymarket-rs-client"
+repository = "https://github.com/niallkehoe/polymarket-rs"
 readme = "README.md"
 license = "Apache-2.0"
 version = "0.1.1"
 edition = "2021"
+
+[lib]
+name = "polymarket"
+path = "src/lib.rs"
 
 [dependencies]
 alloy-primitives = "0.8.12"

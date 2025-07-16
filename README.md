@@ -47,7 +47,7 @@ cargo add rust-decimal
 Create an instance of the `ClobClient` to interact with the [CLOB API](https://docs.polymarket.com/#clob-api). Note that the prerequisite allowances must be set before creating and sending an order as described [here](https://github.com/Polymarket/py-clob-client?tab=readme-ov-file#allowances).
 
 ```rust
-use polymarket_rs_client::ClobClient;
+use polymarket::ClobClient;
 
 use std::env;
 
@@ -68,4 +68,4 @@ async fn main() {
 }
 ```
 
-The `ClobClient` implements the same API as the [official python client](https://github.com/Polymarket/py-clob-client). All available functions are listed in the [docs](https://docs.rs/polymarket-rs-client/latest/polymarket_rs_client/struct.ClobClient.html).
+The `ClobClient` implements the same API as the [official python client](https://github.com/Polymarket/py-clob-client). All available functions are listed in the [docs](https://docs.rs/polymarket-rs-client/latest/polymarket/struct.ClobClient.html).

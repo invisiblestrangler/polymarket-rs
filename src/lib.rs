@@ -25,6 +25,7 @@ mod utils;
 
 pub use data::*;
 pub use eth_utils::EthSigner;
+pub use orders::SigType;
 use headers::{create_l1_headers, create_l2_headers};
 
 #[derive(Default)]
@@ -64,6 +65,28 @@ impl ClobClient {
         }
     }
 
+    pub fn with_l1_headers_proxy(
+        host: &str,
+        key: &str,
+        chain_id: u64,
+        signature_type: Option<SigType>,
+        funder: Option<&str>,
+    ) -> Self {
+        let signer = Box::new(
+            key.parse::<PrivateKeySigner>()
+                .expect("Invalid private key"),
+        );
+        let funder_address = funder.map(|f| f.parse().expect("Invalid funder address"));
+        Self {
+            host: host.to_owned(),
+            http_client: Client::new(),
+            signer: Some(signer.clone()),
+            chain_id: Some(chain_id),
+            api_creds: None,
+            order_builder: Some(OrderBuilder::new(signer, signature_type, funder_address)),
+        }
+    }
+
     pub fn with_l2_headers(host: &str, key: &str, chain_id: u64, api_creds: ApiCreds) -> Self {
         let signer = Box::new(
             key.parse::<PrivateKeySigner>()
@@ -78,6 +101,30 @@ impl ClobClient {
             order_builder: Some(OrderBuilder::new(signer, None, None)),
         }
     }
+    
+    pub fn with_l2_headers_proxy(
+        host: &str,
+        key: &str,
+        chain_id: u64,
+        signature_type: Option<SigType>,
+        funder: Option<&str>,
+        api_creds: ApiCreds,
+    ) -> Self {
+        let signer = Box::new(
+            key.parse::<PrivateKeySigner>()
+                .expect("Invalid private key"),
+        );
+        let funder_address = funder.map(|f| f.parse().expect("Invalid funder address"));
+        Self {
+            host: host.to_owned(),
+            http_client: Client::new(),
+            signer: Some(signer.clone()),
+            chain_id: Some(chain_id),
+            api_creds: Some(api_creds),
+            order_builder: Some(OrderBuilder::new(signer, signature_type, funder_address)),
+        }
+    }
+
     pub fn set_api_creds(&mut self, api_creds: ApiCreds) {
         self.api_creds = Some(api_creds);
     }
@@ -487,7 +534,7 @@ impl ClobClient {
         &self,
         order: SignedOrderRequest,
         order_type: OrderType,
-    ) -> ClientResult<Value> {
+    ) -> ClientResult<OrderResponse> {
         let (signer, creds) = self.get_l2_parameters();
         let body = PostOrder::new(order, creds.api_key.clone(), order_type);
 
@@ -498,12 +545,57 @@ impl ClobClient {
 
         let req = self.create_request_with_headers(method, endpoint, headers.into_iter());
 
-        Ok(req.json(&body).send().await?.json::<Value>().await?)
+        Ok(req.json(&body).send().await?.json::<OrderResponse>().await?)
     }
 
-    pub async fn create_and_post_order(&self, order_args: &OrderArgs) -> ClientResult<Value> {
+    pub async fn create_and_post_order(&self, order_args: &OrderArgs) -> ClientResult<OrderResponse> {
         let order = self.create_order(order_args, None, None, None).await?;
         self.post_order(order, OrderType::GTC).await
+    }
+
+    pub async fn post_order_batch(
+        &self,
+        orders: Vec<(SignedOrderRequest, OrderType)>,
+    ) -> ClientResult<BatchOrderResponse> {
+        if orders.len() > 5 {
+            return Err(anyhow!("Maximum of 5 orders allowed per batch"));
+        }
+
+        let (signer, creds) = self.get_l2_parameters();
+
+        let post_orders: Vec<PostOrder> = orders
+            .into_iter()
+            .map(|(order, order_type)| PostOrder::new(order, creds.api_key.clone(), order_type))
+            .collect();
+
+        let body = PostOrderBatch::new(post_orders);
+
+        let method = Method::POST;
+        let endpoint = "/orders";
+
+        let headers = create_l2_headers(signer, creds, method.as_str(), endpoint, Some(&body))?;
+
+        let req = self.create_request_with_headers(method, endpoint, headers.into_iter());
+
+        Ok(req.json(&body).send().await?.json::<BatchOrderResponse>().await?)
+    }
+
+    pub async fn create_and_post_order_batch(
+        &self,
+        orders_args: &[(OrderArgs, OrderType)],
+    ) -> ClientResult<BatchOrderResponse> {
+        if orders_args.len() > 5 {
+            return Err(anyhow!("Maximum of 5 orders allowed per batch"));
+        }
+
+        let mut signed_orders = Vec::new();
+
+        for (order_args, order_type) in orders_args {
+            let signed_order = self.create_order(order_args, None, None, None).await?;
+            signed_orders.push((signed_order, *order_type));
+        }
+
+        self.post_order_batch(signed_orders).await
     }
 
     pub async fn cancel(&self, order_id: &str) -> ClientResult<Value> {

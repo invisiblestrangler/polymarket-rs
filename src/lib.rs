@@ -504,7 +504,7 @@ impl ClobClient {
     pub async fn create_market_order_with_side(
         &self,
         order_args: &MarketOrderArgs,
-        side: &Side,
+        side: Side,
         extras: Option<ExtraOrderArgs>,
         options: Option<&CreateOrderOptions>,
     ) -> ClientResult<SignedOrderRequest> {

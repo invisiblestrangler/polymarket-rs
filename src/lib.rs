@@ -501,6 +501,36 @@ impl ClobClient {
         }
     }
 
+    pub async fn create_market_order_with_side(
+        &self,
+        order_args: &MarketOrderArgs,
+        side: &Side,
+        extras: Option<ExtraOrderArgs>,
+        options: Option<&CreateOrderOptions>,
+    ) -> ClientResult<SignedOrderRequest> {
+        let (_, chain_id) = self.get_l1_parameters();
+
+        let create_order_options = self
+            .get_filled_order_options(order_args.token_id.as_ref(), options)
+            .await?;
+
+        let extras = extras.unwrap_or_default();
+        let price = self
+            .calculate_market_price(&order_args.token_id, side, order_args.amount)
+            .await?;
+        if !self.is_price_in_range(
+            price,
+            create_order_options.tick_size.expect("Should be filled"),
+        ) {
+            return Err(anyhow!("Price is not in range of tick_size"));
+        }
+
+        self.order_builder
+            .as_ref()
+            .expect("OrderBuilder not set")
+            .create_market_order(chain_id, order_args, price, &extras, create_order_options)
+    }
+
     pub async fn create_market_order(
         &self,
         order_args: &MarketOrderArgs,

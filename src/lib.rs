@@ -576,15 +576,18 @@ impl ClobClient {
         let req = self.create_request_with_headers(method, endpoint, headers.into_iter());
 
         let res = req.json(&body).send().await?;
+        let bytes = res.bytes().await?;
 
-        let parsed = res.clone().json::<OrderResponse>().await;
+        let str = String::from_utf8(bytes.to_vec())?;
+        let parsed = serde_json::from_slice::<OrderResponse>(&bytes);
+        
 
         match parsed {
             Ok(p) => {
                 return Ok(p);
             },
             Err(e) => {
-                println!("{:#?} {:#?}", e, res);
+                println!("{:#?} {:#?}", e, str);
                 return Err(anyhow!("Post order unsuccessful!"));
             }
         }

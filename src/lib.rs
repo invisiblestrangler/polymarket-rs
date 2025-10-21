@@ -584,7 +584,7 @@ impl ClobClient {
                 return Ok(p);
             },
             Err(e) => {
-                println!("{:#?}", e);
+                println!("{:#?} {:#?}", e, res);
                 return Err(anyhow!("Post order unsuccessful!"));
             }
         }

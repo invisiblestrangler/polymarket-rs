@@ -577,7 +577,7 @@ impl ClobClient {
 
         let res = req.json(&body).send().await?;
 
-        let parsed = res.json::<OrderResponse>().await;
+        let parsed = res.clone().json::<OrderResponse>().await;
 
         match parsed {
             Ok(p) => {

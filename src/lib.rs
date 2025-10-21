@@ -575,7 +575,19 @@ impl ClobClient {
 
         let req = self.create_request_with_headers(method, endpoint, headers.into_iter());
 
-        Ok(req.json(&body).send().await?.json::<OrderResponse>().await?)
+        let res = req.json(&body).send().await?;
+
+        let parsed = res.json::<OrderResponse>().await;
+
+        match parsed {
+            Ok(p) => {
+                return Ok(p);
+            },
+            Err(e) => {
+                println!("{:#?}", e);
+                return Err(anyhow!("Post order unsuccessful!"));
+            }
+        }
     }
 
     pub async fn create_and_post_order(&self, order_args: &OrderArgs) -> ClientResult<OrderResponse> {

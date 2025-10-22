@@ -51,7 +51,7 @@ fn generate_seed() -> u64 {
     a as u64
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SignedOrderRequest {
     pub salt: u64,

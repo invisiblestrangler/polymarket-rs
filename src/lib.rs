@@ -562,6 +562,27 @@ impl ClobClient {
             .create_market_order(chain_id, order_args, price, &extras, create_order_options)
     }
 
+    pub async fn create_fast_market_order(
+        &self,
+        order_args: &MarketOrderArgs,
+        price: Decimal,
+        extras: Option<ExtraOrderArgs>,
+        options: Option<&CreateOrderOptions>,
+    ) -> ClientResult<SignedOrderRequest> {
+        let (_, chain_id) = self.get_l1_parameters();
+
+        let create_order_options = self
+            .get_filled_order_options(order_args.token_id.as_ref(), options)
+            .await?;
+
+        let extras = extras.unwrap_or_default();
+
+        self.order_builder
+            .as_ref()
+            .expect("OrderBuilder not set")
+            .create_market_order(chain_id, order_args, price, &extras, create_order_options)
+    }
+
     pub async fn post_order(
         &self,
         order: SignedOrderRequest,
